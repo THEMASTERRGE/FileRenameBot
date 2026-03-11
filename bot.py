@@ -5,7 +5,7 @@ import pyrogram
 # Logging setup
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(name)
+logger = logging.getLogger(__name__)
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
 # Config import
@@ -34,5 +34,5 @@ app = pyrogram.Client(
 Config.AUTH_USERS.add(861055237)
 
 # Run bot
-if name == "main":
+if __name__ == "__main__":
     app.run()
