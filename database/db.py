@@ -1,27 +1,25 @@
-from sqlalchemy import create_engine
+import os
+import threading
+from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, scoped_session
-
-import os
-
-import threading
-import asyncio
-
-from sqlalchemy import Column, Integer, Boolean, String, ForeignKey, UniqueConstraint, func
-
-
-from sample_config import Config
-
-
-def start() -> scoped_session:
-    engine = create_engine(Config.DB_URI, client_encoding="utf8")
-    BASE.metadata.bind = engine
-    BASE.metadata.create_all(engine)
-    return scoped_session(sessionmaker(bind=engine, autoflush=False))
-
+from config import Config
 
 BASE = declarative_base()
-SESSION = start()
+
+# Use a global variable, but don't initialize yet
+_SESSION = None
+
+def get_session():
+    global _SESSION
+    if _SESSION is None:
+        # Fallback to local SQLite if DATABASE_URL is not set
+        db_uri = Config.DB_URI or "sqlite:///bot_database.db"
+        
+        engine = create_engine(db_uri, connect_args={'check_same_thread': False})
+        BASE.metadata.create_all(engine)
+        _SESSION = scoped_session(sessionmaker(bind=engine, autoflush=False))
+    return _SESSION
 
 INSERTION_LOCK = threading.RLock()
 
@@ -34,30 +32,28 @@ class custom_caption(BASE):
         self.id = id
         self.caption = caption
 
-custom_caption.__table__.create(checkfirst=True)
+# --- Helper Methods using get_session() ---
 
 async def update_cap(id, caption):
+    session = get_session()
     with INSERTION_LOCK:
-        cap = SESSION.query(custom_caption).get(id)
-        if not cap:
-            cap = custom_caption(id, caption)
-            SESSION.add(cap)
-            SESSION.flush()
-        else:
-            SESSION.delete(cap)
-            cap = custom_caption(id, caption)
-            SESSION.add(cap)
-        SESSION.commit()
+        cap = session.query(custom_caption).get(id)
+        if cap:
+            session.delete(cap)
+        session.add(custom_caption(id, caption))
+        session.commit()
 
 async def del_caption(id):
+    session = get_session()
     with INSERTION_LOCK:
-        msg = SESSION.query(custom_caption).get(id)
-        SESSION.delete(msg)
-        SESSION.commit()
+        msg = session.query(custom_caption).get(id)
+        if msg:
+            session.delete(msg)
+            session.commit()
 
 async def get_caption(id):
+    session = get_session()
     try:
-        caption = SESSION.query(custom_caption).get(id)
-        return caption
+        return session.query(custom_caption).get(id)
     finally:
-        SESSION.close()
+        session.remove() # Proper way to clear scoped_session
