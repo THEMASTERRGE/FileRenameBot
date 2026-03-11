@@ -1,27 +1,16 @@
 import logging
 import os
 import pyrogram
+from config import Config
 
-# Logging setup
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-logging.getLogger("pyrogram").setLevel(logging.WARNING)
-
-# Config import
-if bool(os.environ.get("WEBHOOK", False)):
-    from sample_config import Config
-else:
-    from config import Config
-
-# Ensure download location exists
-Config.DOWNLOAD_LOCATION = Config.DOWNLOAD_LOCATION or "/tmp/DOWNLOADS"
-os.makedirs(Config.DOWNLOAD_LOCATION, exist_ok=True)
 
 # Plugins
 plugins = dict(root="plugins")
 
-# Pyrogram client
+# Pyrogram Client
 app = pyrogram.Client(
     "RenameBot",
     bot_token=Config.TG_BOT_TOKEN,
@@ -30,9 +19,8 @@ app = pyrogram.Client(
     plugins=plugins
 )
 
-# Add manual authorized user
-Config.AUTH_USERS.add(861055237)
-
-# Run bot
 if __name__ == "__main__":
+    logger.info("Bot is starting...")
+    # Add your authorized user
+    Config.AUTH_USERS.add(861055237)
     app.run()
